@@ -7,12 +7,15 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.ObjectError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 @ControllerAdvice
 public class GlobalExceptionAdvice {
@@ -48,5 +51,24 @@ public class GlobalExceptionAdvice {
 
         ResponseEntity<UnifyResponse> r = new ResponseEntity<>(message,headers,httpStatus);
         return r;
+    }
+
+    // 处理bean异常
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseStatus(code = HttpStatus.BAD_REQUEST)
+    public UnifyResponse handleBeanValidation(HttpServletRequest req,MethodArgumentNotValidException e){
+        String requestUrl = req.getRequestURI();
+        String method = req.getMethod();
+
+        // 获取所有异常消息
+        List<ObjectError> errors = e.getBindingResult().getAllErrors();
+        String messages = this.formatAllErrorMessages(errors);
+        return new UnifyResponse(10001,messages,method + " " + requestUrl);
+    }
+
+    private String formatAllErrorMessages(List<ObjectError> errors) {
+        StringBuffer errorMsg = new StringBuffer();
+        errors.forEach(error -> errorMsg.append(error.getDefaultMessage()).append(';'));
+        return errorMsg.toString();
     }
 }
